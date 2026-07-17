@@ -1,162 +1,238 @@
-# GrowMate · 伴成长
+# GrowMate - 陪伴成长型综合社区平台
 
-AI 陪伴式个人成长记录 + 多领域垂直社区平台（MVP）
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black.svg)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue.svg)](https://www.typescriptlang.org/)
 
-> 让每一段经历都被记录，让每一次成长都有陪伴
+GrowMate 是一个创新的陪伴成长型综合社区平台，结合了 AI 个人档案、多领域成长赋能和垂直陪伴社区功能，为用户提供全方位的成长支持。
 
-## 产品定位
+## ✨ 核心特性
 
-以**个人长期成长档案**为底座，以**AI 深度识人与陪伴**为内核，叠加体能 / 营养 / 心理 / 技术四大赋能体系，并提供垂直情绪与成长社区。
+### 🎯 学习成长系统
+- **四大专业模块**：技术学习、体能训练、营养搭配、心理健康
+- **智能学习路径**：基于 AI 的个性化课程推荐
+- **进度追踪**：可视化学习进度和成就系统
+- **学习工具**：计时器、笔记、数据分析
 
-核心闭环：
+### 🤖 AI 智能功能
+- **AI 个人档案**：智能记录和分析成长轨迹
+- **AI 陪伴聊天**：24/7 情绪支持和学习指导
+- **智能推荐**：基于用户行为的内容推荐
+- **语音交互**：自然语言对话体验
 
-`记录 → AI 建模 → 内容赋能 → 社区陪伴 → 心理监护 → 再建模`
+### 👥 社区互动
+- **垂直社区**：不同领域的专业交流空间
+- **成长日记**：记录感悟、复盘和人生经历
+- **情绪打卡**：心理健康追踪和疏导
+- **经验分享**：用户之间的知识交流
 
-区别于娱乐社交：不主打短期热闹，主打**长期沉淀、专属陪伴、精准赋能**。
-
-## 功能一览（MVP）
-
-| 模块 | 说明 | 路径 |
-|------|------|------|
-| 账号体系 | 注册 / 登录 / JWT Cookie 会话 | `/login` `/register` |
-| 成长总览 | 数据看板、风险提示、今日推荐 | `/dashboard` |
-| 成长日记 | 私密记录 + 时间轴沉淀 | `/journal` |
-| 情绪打卡 | 情绪 / 精力 / 压力曲线 | `/mood` |
-| AI 档案 | 成长档案 + 人格心理动态档案 | `/archive` |
-| AI 陪伴 | 规则引擎对话，可接 OpenAI 兼容模型 | `/ai` |
-| 垂直社区 | 成长 / 心理 / 运动 / 营养 / 技术 | `/community` |
-| 成长课程 | 体能 / 营养 / 技术 / 心理四大模块 | `/learn` |
-
-## 技术栈
-
-| 层级 | 选型 |
-|------|------|
-| Web | Next.js 15 App Router + TypeScript + Tailwind CSS 4 |
-| API | Next.js Route Handlers |
-| ORM | Prisma |
-| 数据库 | SQLite（本地开发，可迁 PostgreSQL） |
-| 认证 | JWT + HttpOnly Cookie |
-| AI | 规则画像引擎 + 可选 OpenAI 兼容接口 |
-
-## 五层架构
-
-1. **数据采集层** — 日记、情绪打卡、学习/训练记录、社区行为  
-2. **AI 档案建模层** — 成长档案 + 人格心理动态档案  
-3. **专业内容赋能层** — 体能 / 营养 / 技术 / 心理  
-4. **垂直社区交互层** — 五个独立子社区  
-5. **心理监护服务层** — 情绪监测、风险提示、复盘建议  
-
-## 项目结构
-
-```text
-ni-h/
-├── apps/web/                 # 全栈应用（页面 + API）
-│   ├── prisma/               # 数据模型与种子数据
-│   ├── src/app/              # App Router 页面与 API
-│   ├── src/components/       # UI 组件
-│   └── src/lib/              # 认证、AI、数据库工具
-├── docs/                     # API 与路线图
-├── outputs/                  # 产品架构等交付文档
-├── package.json              # 根脚本入口
-└── README.md
-```
-
-## 快速开始
+## 🚀 快速开始
 
 ### 环境要求
+- Node.js >= 18.0
+- npm >= 8.0
+- SQLite (开发环境) 或 PostgreSQL (生产环境)
 
-- Node.js 18+（推荐 20/22）
-- npm
-
-### 安装与启动
+### 安装和运行
 
 ```bash
-cd apps/web
+# 1. 克隆项目
+git clone https://github.com/JenniferJJiang/GrowMate.git
+cd GrowMate
+
+# 2. 安装依赖
 npm install
+
+# 3. 设置环境变量
+cp apps/web/.env.example apps/web/.env
+# 编辑 .env 文件配置数据库等信息
+
+# 4. 初始化数据库
 npm run db:generate
 npm run db:push
 npm run db:seed
+
+# 5. 启动开发服务器
 npm run dev
 ```
 
-浏览器打开：[http://localhost:3000](http://localhost:3000)
+访问 http://localhost:3000 查看应用。
 
-也可在仓库根目录：
+### 测试账号
+- 邮箱：demo@growmate.app
+- 密码：demo123456
+
+## 📁 项目结构
+
+```
+GrowMate/
+├── apps/web/                 # Next.js 主应用
+│   ├── src/
+│   │   ├── app/             # App Router 页面
+│   │   │   ├── (main)/     # 主要页面
+│   │   │   │   ├── dashboard/    # 仪表板
+│   │   │   │   ├── learn/        # 学习模块
+│   │   │   │   ├── journal/       # 成长日记
+│   │   │   │   ├── mood/         # 情绪打卡
+│   │   │   │   ├── archive/      # AI档案
+│   │   │   │   ├── ai/           # AI陪伴
+│   │   │   │   └── community/   # 社区
+│   │   │   ├── components/      # React 组件
+│   │   │   │   ├── ui/          # 基础 UI 组件
+│   │   │   │   └── ...         # 业务组件
+│   │   │   ├── lib/           # 工具库和配置
+│   │   │   └── types/         # TypeScript 类型定义
+│   │   ├── prisma/           # 数据库 schema
+│   │   └── public/          # 静态资源
+│   ├── package.json
+│   └── ...
+├── docs/                   # 项目文档
+│   ├── Agent.md           # Agent 操作指南
+│   └── Docker.md          # Docker 部署文档
+├── tools/                 # 工具脚本
+└── README.md             # 项目说明
+```
+
+## 🛠️ 技术栈
+
+### 前端
+- **Next.js 15** - React 全栈框架
+- **TypeScript** - 类型安全的 JavaScript
+- **Tailwind CSS** - 实用优先的 CSS 框架
+- **Lucide React** - 现代化图标库
+- **React Hook Form** - 表单处理
+
+### 后端
+- **Node.js** - JavaScript 运行时
+- **Prisma** - 现代数据库 ORM
+- **SQLite** - 开发环境数据库
+- **PostgreSQL** - 生产环境数据库
+- **JWT** - 身份认证
+- **bcryptjs** - 密码加密
+
+### AI/ML
+- **OpenAI API** - AI 对话和内容生成
+- **自然语言处理** - 情绪分析和内容理解
+
+## 📖 文档
+
+- [Agent 操作指南](./Agent.md) - 详细的 Agent 使用和开发指南
+- [Docker 部署文档](./Docker.md) - 完整的容器化部署方案
+- [API 文档](./docs/api.md) - REST API 接口说明
+- [贡献指南](./docs/CONTRIBUTING.md) - 如何参与项目开发
+
+## 🎯 功能模块
+
+### 学习成长
+- **技术学习**：Linux、Python、自动化、AI 入门课程
+- **体能训练**：居家/户外训练、体态矫正、科学打卡
+- **营养搭配**：饮食搭配、减脂增肌、健康作息指导
+- **心理健康**：情绪疏导、认知调整、轻量心理监护
+
+### AI 档案系统
+- **智能记录**：自动分析用户行为和成长轨迹
+- **个性化推荐**：基于用户画像的内容推荐
+- **趋势分析**：成长数据可视化和趋势预测
+- **目标设定**：SMART 目标设定和追踪
+
+### 社区互动
+- **成长日记**：分享感悟、复盘、人生经历
+- **情绪心理**：纯情绪出口，倾诉压力与心事
+- **运动体能**：训练打卡、健身经验、互相监督
+- **技术学习**：编程、Linux、AI 自学交流与答疑
+
+## 🔧 开发指南
+
+### 添加新功能
+
+1. **数据库设计**
+   ```bash
+   # 更新 Prisma schema
+   npx prisma schema
+   
+   # 生成迁移文件
+   npx prisma migrate dev
+   ```
+
+2. **前端组件**
+   ```typescript
+   # 在 src/components/ 目录下创建新组件
+   # 遵循现有的命名约定和样式规范
+   ```
+
+3. **API 接口**
+   ```typescript
+   # 在 src/app/api/ 目录下创建新的路由
+   # 使用 TypeScript 进行类型定义
+   ```
+
+### 代码规范
+
+- 使用 ESLint 和 Prettier 进行代码格式化
+- 遵循 TypeScript 严格模式
+- 组件使用函数式编程和 Hooks
+- 使用 Tailwind CSS 进行样式开发
+
+### 测试
 
 ```bash
-npm run setup
-npm run dev
+# 运行测试
+npm test
+
+# 测试覆盖率
+npm run test:coverage
+
+# 端到端测试
+npm run test:e2e
 ```
 
-### 演示账号
+## 🚀 部署
 
-| 字段 | 值 |
-|------|-----|
-| 邮箱 | `demo@growmate.app` |
-| 密码 | `demo123456` |
-
-### 可选：接入真实大模型
-
-复制环境变量模板并填写：
-
+### 本地部署
 ```bash
-cp apps/web/.env.example apps/web/.env
+npm run build
+npm run start
 ```
 
-在 `apps/web/.env` 中配置：
+### Docker 部署
+```bash
+# 使用 Docker Compose
+docker-compose up -d
 
-```env
-OPENAI_API_KEY=your_key
-OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_MODEL=gpt-4o-mini
+# 或使用 Docker 单独部署
+docker build -t growmate:latest .
+docker run -d -p 3000:3000 growmate:latest
 ```
 
-未配置时，AI 陪伴自动回退到本地规则引擎，仍可完整体验。
+详细部署说明请参考 [Docker.md](./Docker.md)。
 
-## 常用脚本
+## 🤝 贡献
 
-在 `apps/web` 目录：
+我们欢迎所有形式的贡献！请参考 [贡献指南](./docs/CONTRIBUTING.md)。
 
-| 命令 | 说明 |
-|------|------|
-| `npm run dev` | 开发服务器 |
-| `npm run build` | 生产构建 |
-| `npm run start` | 启动生产服务 |
-| `npm run db:generate` | 生成 Prisma Client |
-| `npm run db:push` | 同步数据库结构 |
-| `npm run db:seed` | 写入演示数据 |
-| `npm run db:studio` | 打开 Prisma Studio |
+### 贡献方式
+1. **报告问题**：在 GitHub Issues 中提交 bug 报告
+2. **功能建议**：提出新功能或改进建议
+3. **代码贡献**：提交 Pull Request
+4. **文档改进**：完善项目文档
+5. **测试贡献**：编写测试用例
 
-## 文档
+## 📄 许可证
 
-- [产品架构与开发方案](outputs/产品架构与开发方案.md)
-- [本地启动说明](outputs/本地启动说明.md)
-- [API 一览](docs/API.md)
-- [开发路线图](docs/ROADMAP.md)
+本项目采用 MIT 许可证。详情请参阅 [LICENSE](LICENSE) 文件。
 
-## 设计原则（摘录）
+## 🙏 致谢
 
-1. **先存档，后社交** — 以个人档案为核心壁垒  
-2. **隐私默认** — 日记默认私密，心理区支持匿名  
-3. **AI + 可演进人工兜底** — 轻量风险识别，预留人工复核扩展  
-4. **模块解耦** — 社区与课程可独立运营、后续可扩展领域  
+感谢所有为这个项目做出贡献的开发者和用户。
 
-## Git
+## 📞 联系我们
 
-首次提交：`a7ef1f1`（chore: initial commit for GrowMate MVP）
-
-若根目录 `.git` 尚无提交记录，请运行一次：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\tools\finalize-git.ps1
-```
-
-详见 [docs/GIT.md](docs/GIT.md)。
-
-## 许可证
-
-本项目当前为私有创业原型，未声明开源许可证。如需开源请先补充 LICENSE。
+- **GitHub Issues**：[提交问题](https://github.com/JenniferJJiang/GrowMate/issues)
+- **讨论**：[GitHub Discussions](https://github.com/JenniferJJiang/GrowMate/discussions)
+- **邮件**：[项目维护者](mailto:contact@growmate.app)
 
 ---
 
-GrowMate · 伴成长 — 记录、识人、陪伴、成长
+*GrowMate · 伴成长 - 记录 · 识人 · 陪伴 · 成长*
+
+*最后更新：2026年7月18日*
