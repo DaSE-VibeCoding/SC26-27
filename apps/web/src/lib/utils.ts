@@ -72,7 +72,7 @@ export const MODULE_META: Record<
   },
   tech: {
     name: "技术学习",
-    description: "Linux / Python / 自动化 / AI 入门",
+    description: "计算机基础、编程、自动化",
     color: "from-sky-400 to-indigo-500",
   },
   mental: {

@@ -7,15 +7,20 @@ import { StudyTimer } from "@/components/StudyTimer";
 import { CourseActions } from "@/components/CourseActions";
 import { ExpandableContent } from "@/components/ExpandableContent";
 
-// 简化的课程数据结构
+type CourseProgress = {
+  status: string;
+  notes: string;
+  studyTime: number;
+};
+
 interface Course {
   id: string;
   title: string;
   summary: string;
   level: string;
   durationMin: number;
-  content: string;
   order: number;
+  progress: CourseProgress;
 }
 
 interface CourseModule {
@@ -32,109 +37,18 @@ export default function LearnModuleClient({
   params: Promise<{ module: string }>;
 }) {
   const [courseModule, setCourseModule] = useState<CourseModule | null>(null);
-  const [progressMap, setProgressMap] = useState<Record<string, string>>({});
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  const [totalStudyTime, setTotalStudyTime] = useState(0);
-  const [notes, setNotes] = useState<Record<string, string>>({});
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadData() {
-      const { module: slug } = await params;
-      
-      // 模拟课程数据 - 实际应用中应该从 API 获取
-      const mockCourses: Course[] = [
-        {
-          id: "1",
-          title: "Linux 基础入门",
-          summary: "学习 Linux 操作系统的基本概念和常用命令",
-          level: "入门",
-          durationMin: 30,
-          content: `一、Linux 系统概述
-Linux 是一个开源的操作系统内核，由 Linus Torvalds 于 1991 年创建。Linux 系统具有稳定性高、安全性好、免费开源等优点，广泛应用于服务器、嵌入式设备和桌面系统。常见的 Linux 发行版包括 Ubuntu、CentOS、Debian 等。
-
-二、基础命令操作
-1. 文件管理：ls（列出目录）、cd（切换目录）、cp（复制）、mv（移动）、rm（删除）
-2. 文本编辑：vim、nano 等编辑器基本使用
-3. 权限管理：chmod（修改权限）、chown（修改所有者）
-4. 进程管理：ps（查看进程）、top（系统监控）、kill（终止进程）
-
-三、实用技巧
-1. 使用 Tab 键自动补全命令和路径
-2. 使用 Ctrl+C 终止当前命令，Ctrl+Z 暂停命令
-3. 使用 man 命令查看帮助文档
-4. 管道符 | 和重定向 >、>> 的高效使用`,
-          order: 1
-        },
-        {
-          id: "2", 
-          title: "Python 编程基础",
-          summary: "掌握 Python 语言的基本语法和编程思维",
-          level: "入门",
-          durationMin: 45,
-          content: `一、Python 语言简介
-Python 是一种高级编程语言，以其简洁的语法和强大的功能而闻名。它支持多种编程范式，包括面向对象、命令式、函数式和过程式编程。Python 拥有丰富的标准库和第三方库，广泛应用于 Web 开发、数据分析、人工智能等领域。
-
-二、核心语法
-1. 变量与数据类型：整数（int）、浮点数（float）、字符串（str）、列表（list）、字典（dict）
-2. 控制流程：if-elif-else 条件判断、for/while 循环
-3. 函数定义：使用 def 关键字，支持默认参数和返回值
-4. 面向对象：class 定义类、继承、封装、多态
-
-三、实践练习
-1. 编写一个简单的计算器程序
-2. 实现一个学生成绩管理系统
-3. 使用 requests 库爬取网页数据
-4. 利用 pandas 进行数据分析入门`,
-          order: 2
-        },
-        {
-          id: "3",
-          title: "自动化脚本开发",
-          summary: "学习使用 Python 进行系统自动化和任务自动化",
-          level: "进阶",
-          durationMin: 60,
-          content: `一、自动化脚本基础
-自动化脚本是提高工作效率的重要工具。通过编写脚本，可以自动完成重复性工作，如文件处理、系统管理、数据备份等。Python 凭借其丰富的库生态，成为自动化脚本开发的首选语言。
-
-二、常用自动化库
-1. os 和 shutil：文件和目录操作（批量重命名、文件移动、目录遍历）
-2. subprocess：执行系统命令和外部程序
-3. schedule：定时任务调度，支持按秒/分/时/天执行
-4. watchdog：文件系统监控，检测文件变化事件
-
-三、实战项目
-1. 批量文件重命名工具：按规则整理文件夹中的文件
-2. 定时数据备份脚本：自动备份数据库和重要文件
-3. 日志分析工具：从日志文件中提取关键信息并生成报告
-4. 邮件通知系统：监控系统状态并通过邮件发送告警`,
-          order: 3
-        }
-      ];
-
-      const mockModule: CourseModule = {
-        id: "1",
-        name: "技术学习",
-        description: "Linux / Python / 自动化 / AI 入门",
-        slug: "tech",
-        courses: mockCourses
-      };
-      
-      setCourseModule(mockModule);
-
-      // 从本地存储加载进度
-      const savedProgress = localStorage.getItem(`progress_${slug}`);
-      if (savedProgress) {
-        setProgressMap(JSON.parse(savedProgress));
-      }
-
-      // 从本地存储加载笔记
-      const savedNotes = localStorage.getItem(`notes_${slug}`);
-      if (savedNotes) {
-        setNotes(JSON.parse(savedNotes));
-      }
+      const { module: moduleSlug } = await params;
+      const res = await fetch("/api/courses");
+      if (!res.ok) return;
+      const data = await res.json();
+      const found = data.modules.find((m: { slug: string }) => m.slug === moduleSlug);
+      if (found) setCourseModule(found);
     }
-
     loadData();
   }, [params]);
 
@@ -149,13 +63,14 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
   };
 
   const totalCourses = courseModule.courses.length;
-  const completedCourses = Object.values(progressMap).filter(status => status === "completed").length;
+  const completedCourses = courseModule.courses.filter((c) => c.progress.status === "completed").length;
   const progressPercentage = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0;
+  const totalStudyTime = courseModule.courses.reduce((sum, c) => sum + (c.progress.studyTime || 0), 0);
 
   // 获取下一个推荐课程
   const getNextRecommendedCourse = () => {
     const incompleteCourses = courseModule.courses.filter(
-      course => progressMap[course.id] !== "completed"
+      course => course.progress.status !== "completed"
     );
     
     if (incompleteCourses.length > 0) {
@@ -172,21 +87,76 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
   const nextRecommendedCourse = getNextRecommendedCourse();
 
   // 更新课程进度
-  const updateCourseProgress = (courseId: string, status: string) => {
-    const newProgressMap = { ...progressMap, [courseId]: status };
-    setProgressMap(newProgressMap);
-    localStorage.setItem(`progress_${courseModule.slug}`, JSON.stringify(newProgressMap));
+  const updateCourseProgress = async (courseId: string, status: string) => {
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, status }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, status: data.progress.status } }
+            : c
+        ),
+      };
+    });
   };
 
   // 添加笔记
-  const addNote = (courseId: string) => {
+  const addNote = async (courseId: string) => {
     const text = noteInputs[courseId]?.trim();
     if (!text) return;
-    const courseNotes = notes[courseId] || "";
-    const newNotes = { ...notes, [courseId]: courseNotes + (courseNotes ? "\n---\n" : "") + `[${new Date().toLocaleString("zh-CN")}] ${text}` };
-    setNotes(newNotes);
-    localStorage.setItem(`notes_${courseModule.slug}`, JSON.stringify(newNotes));
+    const course = courseModule.courses.find((c) => c.id === courseId);
+    const existingNotes = course?.progress.notes || "";
+    const newNotes = existingNotes + (existingNotes ? "\n---\n" : "") + `[${new Date().toLocaleString("zh-CN")}] ${text}`;
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, notes: newNotes }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, notes: data.progress.notes } }
+            : c
+        ),
+      };
+    });
     setNoteInputs({ ...noteInputs, [courseId]: "" });
+  };
+
+  // 学习计时结束
+  const handleStudySessionEnd = async (courseId: string, seconds: number, currentStudyTime: number) => {
+    const newStudyTime = currentStudyTime + seconds;
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, studyTime: newStudyTime }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, studyTime: data.progress.studyTime } }
+            : c
+        ),
+      };
+    });
   };
 
   return (
@@ -220,7 +190,7 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
           {/* 每课进度点 */}
           <div className="mt-3 flex items-center gap-2">
             {courseModule.courses.map((course, i) => {
-              const done = progressMap[course.id] === "completed";
+              const done = course.progress.status === "completed";
               return (
                 <a
                   key={course.id}
@@ -251,7 +221,7 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
 
       <div className="space-y-4">
         {courseModule.courses.map((c, idx) => {
-          const status = progressMap[c.id] || "not_started";
+          const status = c.progress.status;
           const isCompleted = status === "completed";
           
           return (
@@ -279,7 +249,12 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
                   <p className="text-sm text-stone-600 mb-3">{c.summary}</p>
                   
                   {/* 课程内容预览 */}
-                  <ExpandableContent content={c.content} />
+                  <Link
+                    href={`/learn/${courseModule.slug}/${c.id}`}
+                    className="text-sm text-teal-700 hover:text-teal-800 font-medium inline-flex items-center gap-1"
+                  >
+                    查看课程详情 →
+                  </Link>
                   
                   {/* 学习计时器 */}
                   {currentCourse?.id === c.id ? (
@@ -293,7 +268,7 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
                       <StudyTimer
                         courseId={c.id}
                         courseTitle={c.title}
-                        onSessionEnd={(seconds) => setTotalStudyTime(prev => prev + seconds)}
+                        onSessionEnd={(seconds) => handleStudySessionEnd(c.id, seconds, c.progress.studyTime)}
                       />
                     </div>
                   ) : (
@@ -313,9 +288,9 @@ Python 是一种高级编程语言，以其简洁的语法和强大的功能而�
                       <span className="text-lg">📝</span>
                       <div className="text-sm font-medium text-amber-800">学习笔记</div>
                     </div>
-                    {notes[c.id] && (
+                    {c.progress.notes && (
                       <div className="mb-2 p-2 bg-white rounded text-xs text-stone-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
-                        {notes[c.id]}
+                        {c.progress.notes}
                       </div>
                     )}
                     <textarea
