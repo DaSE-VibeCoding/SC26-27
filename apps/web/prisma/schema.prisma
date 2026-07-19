@@ -138,7 +138,7 @@ model Course {
   summary     String
   level       String @default("beginner") // beginner | intermediate | advanced
   durationMin Int    @default(30)
-  content     String
+  lessons     String @default("[]") // JSON array of {title, content, codeExamples, exercises}
   order       Int    @default(0)
 
   module   CourseModule     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
@@ -152,6 +152,8 @@ model CourseProgress {
   userId      String
   courseId    String
   status      String    @default("not_started") // not_started | in_progress | completed
+  notes       String    @default("") // 学习笔记
+  studyTime   Int       @default(0) // 累计学习时长（秒）
   completedAt DateTime?
   updatedAt   DateTime  @updatedAt
 

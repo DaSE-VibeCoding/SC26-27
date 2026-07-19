@@ -3,16 +3,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MODULE_META } from "@/lib/utils";
+import { StudyTimer } from "@/components/StudyTimer";
+import { CourseActions } from "@/components/CourseActions";
+import { ExpandableContent } from "@/components/ExpandableContent";
 
-// 简化的课程数据结构
+type CourseProgress = {
+  status: string;
+  notes: string;
+  studyTime: number;
+};
+
 interface Course {
   id: string;
   title: string;
   summary: string;
   level: string;
   durationMin: number;
-  content: string;
   order: number;
+  progress: CourseProgress;
 }
 
 interface CourseModule {
@@ -29,62 +37,18 @@ export default function LearnModuleClient({
   params: Promise<{ module: string }>;
 }) {
   const [courseModule, setCourseModule] = useState<CourseModule | null>(null);
-  const [progressMap, setProgressMap] = useState<Record<string, string>>({});
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  const [totalStudyTime, setTotalStudyTime] = useState(0); // in minutes
+  const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadData() {
-      const { module: slug } = await params;
-      
-      // 模拟课程数据 - 实际应用中应该从 API 获取
-      const mockCourses: Course[] = [
-        {
-          id: "1",
-          title: "Linux 基础入门",
-          summary: "学习 Linux 操作系统的基本概念和常用命令",
-          level: "入门",
-          durationMin: 30,
-          content: "Linux 是一个开源的操作系统内核，它最初由 Linus Torvalds 于 1991 年创建。Linux 系统具有稳定性高、安全性好、免费开源等优点，广泛应用于服务器、嵌入式设备和桌面系统。",
-          order: 1
-        },
-        {
-          id: "2", 
-          title: "Python 编程基础",
-          summary: "掌握 Python 语言的基本语法和编程思维",
-          level: "入门",
-          durationMin: 45,
-          content: "Python 是一种高级编程语言，以其简洁的语法和强大的功能而闻名。它支持多种编程范式，包括面向对象、命令式、函数式和过程式编程。",
-          order: 2
-        },
-        {
-          id: "3",
-          title: "自动化脚本开发",
-          summary: "学习使用 Python 进行系统自动化和任务自动化",
-          level: "进阶",
-          durationMin: 60,
-          content: "自动化脚本是提高工作效率的重要工具。通过编写脚本，可以自动完成重复性工作，如文件处理、系统管理、数据备份等。",
-          order: 3
-        }
-      ];
-
-      const mockModule: CourseModule = {
-        id: "1",
-        name: "技术学习",
-        description: "Linux / Python / 自动化 / AI 入门",
-        slug: "tech",
-        courses: mockCourses
-      };
-      
-      setCourseModule(mockModule);
-
-      // 从本地存储加载进度
-      const savedProgress = localStorage.getItem(`progress_${slug}`);
-      if (savedProgress) {
-        setProgressMap(JSON.parse(savedProgress));
-      }
+      const { module: moduleSlug } = await params;
+      const res = await fetch("/api/courses");
+      if (!res.ok) return;
+      const data = await res.json();
+      const found = data.modules.find((m: { slug: string }) => m.slug === moduleSlug);
+      if (found) setCourseModule(found);
     }
-
     loadData();
   }, [params]);
 
@@ -99,18 +63,20 @@ export default function LearnModuleClient({
   };
 
   const totalCourses = courseModule.courses.length;
-  const completedCourses = Object.values(progressMap).filter(status => status === "completed").length;
+  const completedCourses = courseModule.courses.filter((c) => c.progress.status === "completed").length;
   const progressPercentage = totalCourses > 0 ? Math.round((completedCourses / totalCourses) * 100) : 0;
+  const totalStudyTime = courseModule.courses.reduce((sum, c) => sum + (c.progress.studyTime || 0), 0);
 
   // 获取下一个推荐课程
   const getNextRecommendedCourse = () => {
     const incompleteCourses = courseModule.courses.filter(
-      course => progressMap[course.id] !== "completed"
+      course => course.progress.status !== "completed"
     );
     
     if (incompleteCourses.length > 0) {
       const nextCourse = incompleteCourses[0];
       return {
+        id: nextCourse.id,
         title: nextCourse.title,
         reason: `这是你的下一个课程，建议完成后再继续学习其他内容。`
       };
@@ -121,10 +87,76 @@ export default function LearnModuleClient({
   const nextRecommendedCourse = getNextRecommendedCourse();
 
   // 更新课程进度
-  const updateCourseProgress = (courseId: string, status: string) => {
-    const newProgressMap = { ...progressMap, [courseId]: status };
-    setProgressMap(newProgressMap);
-    localStorage.setItem(`progress_${courseModule.slug}`, JSON.stringify(newProgressMap));
+  const updateCourseProgress = async (courseId: string, status: string) => {
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, status }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, status: data.progress.status } }
+            : c
+        ),
+      };
+    });
+  };
+
+  // 添加笔记
+  const addNote = async (courseId: string) => {
+    const text = noteInputs[courseId]?.trim();
+    if (!text) return;
+    const course = courseModule.courses.find((c) => c.id === courseId);
+    const existingNotes = course?.progress.notes || "";
+    const newNotes = existingNotes + (existingNotes ? "\n---\n" : "") + `[${new Date().toLocaleString("zh-CN")}] ${text}`;
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, notes: newNotes }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, notes: data.progress.notes } }
+            : c
+        ),
+      };
+    });
+    setNoteInputs({ ...noteInputs, [courseId]: "" });
+  };
+
+  // 学习计时结束
+  const handleStudySessionEnd = async (courseId: string, seconds: number, currentStudyTime: number) => {
+    const newStudyTime = currentStudyTime + seconds;
+    const res = await fetch("/api/courses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ courseId, studyTime: newStudyTime }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setCourseModule((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        courses: prev.courses.map((c) =>
+          c.id === courseId
+            ? { ...c, progress: { ...c.progress, studyTime: data.progress.studyTime } }
+            : c
+        ),
+      };
+    });
   };
 
   return (
@@ -139,29 +171,61 @@ export default function LearnModuleClient({
         
         {/* 进度统计 */}
         <div className="mt-4 rounded-xl bg-white/80 backdrop-blur-sm border border-stone-200 p-4">
-          <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-medium text-stone-700">学习进度</span>
             <span className="text-sm font-bold text-teal-700">{progressPercentage}%</span>
           </div>
-          <div className="w-full bg-stone-200 rounded-full h-2">
+          <div className="w-full bg-stone-200 rounded-full h-3">
             <div 
-              className={`h-2 rounded-full bg-gradient-to-r ${meta.color}`}
+              className={`h-3 rounded-full bg-gradient-to-r ${meta.color} transition-all duration-500`}
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <div className="mt-2 text-xs text-stone-500">
-            已完成 {completedCourses} / {totalCourses} 课
+          <div className="mt-3 flex items-center justify-between text-xs text-stone-500">
+            <span>已完成 {completedCourses} / {totalCourses} 课</span>
+            {completedCourses === totalCourses && totalCourses > 0 && (
+              <span className="text-teal-600 font-medium">🎉 全部完成！</span>
+            )}
+          </div>
+          {/* 每课进度点 */}
+          <div className="mt-3 flex items-center gap-2">
+            {courseModule.courses.map((course, i) => {
+              const done = course.progress.status === "completed";
+              return (
+                <a
+                  key={course.id}
+                  href={`#course-${course.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById(`course-${course.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="flex items-center gap-1.5 group"
+                  title={course.title}
+                >
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full transition-all ${
+                      done
+                        ? "bg-teal-500 shadow-sm shadow-teal-200"
+                        : "bg-stone-300 group-hover:bg-stone-400"
+                    }`}
+                  />
+                  <span className={`text-xs ${done ? "text-teal-600" : "text-stone-400"} hidden sm:inline`}>
+                    {i + 1}
+                  </span>
+                </a>
+              );
+            })}
           </div>
         </div>
       </div>
 
       <div className="space-y-4">
         {courseModule.courses.map((c, idx) => {
-          const status = progressMap[c.id] || "not_started";
+          const status = c.progress.status;
           const isCompleted = status === "completed";
           
           return (
-            <article key={c.id} className="card p-5 hover:shadow-lg transition-shadow">
+            <article key={c.id} id={`course-${c.id}`} className="card p-5 hover:shadow-lg transition-shadow scroll-mt-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-2">
@@ -178,43 +242,45 @@ export default function LearnModuleClient({
                       </span>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      <button className="p-2 rounded-lg text-stone-500 hover:text-red-500 hover:bg-red-50 transition-colors" title="收藏">
-                        <span className="text-lg">❤️</span>
-                      </button>
-                      <button className="p-2 rounded-lg text-stone-500 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="分享">
-                        <span className="text-lg">🔗</span>
-                      </button>
-                    </div>
+                    <CourseActions courseId={c.id} isCompleted={isCompleted} />
                   </div>
                   
                   <h2 className="text-lg font-bold mb-1">{c.title}</h2>
                   <p className="text-sm text-stone-600 mb-3">{c.summary}</p>
                   
                   {/* 课程内容预览 */}
-                  <div className="bg-stone-50 rounded-xl p-4 mb-3">
-                    <div className="text-xs font-medium text-stone-500 mb-2">课程内容</div>
-                    <div className="text-sm text-stone-700 leading-relaxed">
-                      {c.content.length > 200 
-                        ? `${c.content.substring(0, 200)}...` 
-                        : c.content
-                      }
-                    </div>
-                    {c.content.length > 200 && (
-                      <button className="mt-2 text-xs text-teal-700 hover:text-teal-800 font-medium">
-                        查看完整内容 →
-                      </button>
-                    )}
-                  </div>
+                  <Link
+                    href={`/learn/${courseModule.slug}/${c.id}`}
+                    className="text-sm text-teal-700 hover:text-teal-800 font-medium inline-flex items-center gap-1"
+                  >
+                    查看课程详情 →
+                  </Link>
                   
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      className="text-xs text-teal-700 hover:text-teal-800 font-medium"
-                      onClick={() => setCurrentCourse(c)}
-                    >
-                      开始学习计时
-                    </button>
-                  </div>
+                  {/* 学习计时器 */}
+                  {currentCourse?.id === c.id ? (
+                    <div className="relative mb-3">
+                      <button
+                        onClick={() => setCurrentCourse(null)}
+                        className="absolute top-2 right-2 text-stone-400 hover:text-stone-600 z-10 text-sm"
+                      >
+                        ✕
+                      </button>
+                      <StudyTimer
+                        courseId={c.id}
+                        courseTitle={c.title}
+                        onSessionEnd={(seconds) => handleStudySessionEnd(c.id, seconds, c.progress.studyTime)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        className="btn btn-sm"
+                        onClick={() => setCurrentCourse(c)}
+                      >
+                        开始学习计时
+                      </button>
+                    </div>
+                  )}
                   
                   {/* 学习笔记 */}
                   <div className="bg-amber-50 rounded-xl p-4 border border-amber-200 mt-3">
@@ -222,19 +288,30 @@ export default function LearnModuleClient({
                       <span className="text-lg">📝</span>
                       <div className="text-sm font-medium text-amber-800">学习笔记</div>
                     </div>
+                    {c.progress.notes && (
+                      <div className="mb-2 p-2 bg-white rounded text-xs text-stone-700 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                        {c.progress.notes}
+                      </div>
+                    )}
                     <textarea
                       placeholder="记录你的学习心得、疑问或重要知识点..."
                       className="textarea w-full text-sm"
                       rows={2}
+                      value={noteInputs[c.id] || ""}
+                      onChange={(e) => setNoteInputs({ ...noteInputs, [c.id]: e.target.value })}
                     />
-                    <button className="btn btn-primary text-xs mt-2">添加笔记</button>
+                    <button
+                      className="btn btn-primary text-xs mt-2"
+                      onClick={() => addNote(c.id)}
+                    >
+                      添加笔记
+                    </button>
                   </div>
                 </div>
                 
                 <button
                   className={`btn ${isCompleted ? "btn-secondary" : "btn-primary"}`}
                   onClick={() => updateCourseProgress(c.id, isCompleted ? "not_started" : "completed")}
-                  disabled={isCompleted}
                 >
                   {isCompleted ? "已完成" : "标记完成"}
                 </button>
@@ -261,7 +338,16 @@ export default function LearnModuleClient({
         {nextRecommendedCourse && (
           <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <div className="text-sm font-medium text-blue-800 mb-1">推荐下一课程</div>
-            <div className="text-sm text-blue-700 font-medium">{nextRecommendedCourse.title}</div>
+            <a
+              href={`#course-${nextRecommendedCourse.id}`}
+              className="text-sm text-blue-700 font-medium hover:text-blue-900 underline"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(`course-${nextRecommendedCourse.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              {nextRecommendedCourse.title}
+            </a>
             <div className="text-xs text-blue-600 mt-1">{nextRecommendedCourse.reason}</div>
           </div>
         )}
@@ -296,7 +382,7 @@ export default function LearnModuleClient({
         <div className="grid gap-3">
           {[
             { id: "1", title: "初学者", description: "完成第一门课程", earned: completedCourses >= 1 },
-            { id: "2", title: "坚持学习者", description: "连续学习7天", earned: totalStudyTime >= 420 },
+            { id: "2", title: "坚持学习者", description: "累计学习30分钟", earned: totalStudyTime >= 1800 },
             { id: "3", title: "课程完成者", description: "完成50%的课程", earned: completedCourses >= Math.ceil(totalCourses * 0.5) },
           ].map((achievement) => (
             <div
@@ -339,7 +425,7 @@ export default function LearnModuleClient({
               <div className="text-xs text-stone-600">已完成课程</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-green-600">{Math.round(totalStudyTime / 60)}h</div>
+              <div className="text-lg font-bold text-green-600">{Math.round(totalStudyTime / 60)}m</div>
               <div className="text-xs text-stone-600">学习时长</div>
             </div>
           </div>

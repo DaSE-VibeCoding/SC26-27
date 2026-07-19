@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 
+type ProgressInfo = {
+  status: string;
+  notes: string;
+  studyTime: number;
+};
+
 export async function GET() {
   const modules = await prisma.courseModule.findMany({
     include: {
@@ -11,13 +17,13 @@ export async function GET() {
   });
 
   const session = await getSession();
-  let progressMap: Record<string, string> = {};
+  let progressMap: Record<string, ProgressInfo> = {};
   if (session) {
     const progress = await prisma.courseProgress.findMany({
       where: { userId: session.id },
     });
     progressMap = Object.fromEntries(
-      progress.map((p) => [p.courseId, p.status])
+      progress.map((p) => [p.courseId, { status: p.status, notes: p.notes, studyTime: p.studyTime }])
     );
   }
 
@@ -26,7 +32,8 @@ export async function GET() {
       ...m,
       courses: m.courses.map((c) => ({
         ...c,
-        status: progressMap[c.id] || "not_started",
+        lessons: JSON.parse(c.lessons),
+        progress: progressMap[c.id] || { status: "not_started", notes: "", studyTime: 0 },
       })),
     })),
   });
@@ -37,11 +44,13 @@ export async function POST(req: Request) {
   if (!session) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
   }
-  const body = (await req.json()) as { courseId?: string; status?: string };
+  const body = (await req.json()) as { courseId?: string; status?: string; notes?: string; studyTime?: number };
   if (!body.courseId) {
     return NextResponse.json({ error: "缺少 courseId" }, { status: 400 });
   }
   const status = body.status || "completed";
+  const completedAt = status === "completed" ? new Date() : null;
+
   const progress = await prisma.courseProgress.upsert({
     where: {
       userId_courseId: { userId: session.id, courseId: body.courseId },
@@ -50,11 +59,15 @@ export async function POST(req: Request) {
       userId: session.id,
       courseId: body.courseId,
       status,
-      completedAt: status === "completed" ? new Date() : null,
+      completedAt,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.studyTime !== undefined ? { studyTime: body.studyTime } : {}),
     },
     update: {
       status,
-      completedAt: status === "completed" ? new Date() : null,
+      completedAt,
+      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      ...(body.studyTime !== undefined ? { studyTime: body.studyTime } : {}),
     },
   });
   return NextResponse.json({ progress });
